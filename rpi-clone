@@ -73,6 +73,7 @@ usage: $PGM sdN {-v|--verbose} {-f|--force-initialize} {-f2}
          {-s|--setup host} {-e|--edit-fstab sdX } {-m|--mountdir dir }
          {-L|--label-partitions label} {-l|--leave-sd-usb-boot}
          {-a|--all-sync} {-F|--Force-sync} {-x} {-V|--version}
+         {-i|--image /path/to/image.img}
          {--convert-fstab-to-partuuid}
 
     -v	    - verbose rsync, list all files as they are copied.
@@ -109,6 +110,7 @@ usage: $PGM sdN {-v|--verbose} {-f|--force-initialize} {-f2}
     -F      - force file system sync even if errors.
                 If source used > destination space error, do the sync anyway.
 		If a source partition mount error, skip it and do other syncs.
+    -i      - target is an image file, not a device.
     -x      - use set -x for very verbose bash shell script debugging
     -V      - print rpi-clone version.
 
@@ -167,7 +169,7 @@ qecho()
     	echo "$@"
     fi
 	}
-	
+
 qprintf()
 	{
     if ((!quiet))
@@ -679,6 +681,8 @@ quiet=0
 custom_sync=0
 leave_sd_usb_boot=0
 convert_to_partuuid=0
+image=""
+use_image=0
 
 while [ "$1" ]
 do
@@ -769,6 +773,16 @@ do
 		--convert-fstab-to-partuuid)
 			convert_to_partuuid=1
 			;;
+                -i|--image)
+                        shift
+                        image="$1"
+                        use_image=1
+                        if [ -e "$image" ]
+                        then
+                                echo "Image $image already exists; aborting"
+                                exit 1
+                        fi
+                        ;;
 		-V|--version)
 			echo $PGM Version: $version
 			exit 0
@@ -777,7 +791,7 @@ do
 			usage
 			;;
 		*)
-			if [ "$dst_disk" != "" ]
+			if [ "$dst_disk" != "" ] || [ "$image" != "" ]
 			then
 				echo "Bad args"
 				usage
@@ -910,9 +924,18 @@ do
 	src_used_sectors[p]=$((blocks * 2))
 done
 
+# ==== image loop device setup
+#
+if ((use_image))
+then
+       truncate -s "$(($src_disk_size * 512 ))" "$image"
+       dst_disk=$(losetup -f --show "$image")
+       dst_disk=${dst_disk#/dev/}
+fi
+
 # ==== destination disk checks
 #
-if [ "$dst_disk" = "" ]
+if [ "$dst_disk" == "" ]
 then
 	echo "No destination disk given."
 	usage
@@ -944,6 +967,9 @@ then
 		else
 			assumed_fstab_edit=0
 		fi
+        elif ((use_image))
+        then
+		dst_part_base=${dst_disk}p
 	else
 		qecho $"
   Target disk $dst_disk ends with a digit so may be a partition.
@@ -1177,7 +1203,7 @@ Use -U for unattended even if initializing.
 
 	readable $((last_part_sectors + 7812)) "512" image_space_readable
 
-	echo "== Initialize: IMAGE $src_disk partition table to $dst_disk - $reason ==" 
+	echo "== Initialize: IMAGE $src_disk partition table to $dst_disk - $reason =="
 	print_image_actions
 	print_options
 
@@ -1362,7 +1388,7 @@ Use -U for unattended even if initializing.
 						else
 							src_sync_part[p]=1
 						fi
-					fi					
+					fi
 				else
 					printf "  => dd if=${src_device[$p]} of=$dst_dev bs=1M ..."
 					dd if=${src_device[$p]} of=$dst_dev bs=1M &>> /tmp/$PGM-output
@@ -1629,7 +1655,7 @@ qprintf "   Start - %s    End - %s    Elapsed Time - %d:%02d\n" \
 if ((!unattended))
 then
 	echo -n $"
-Cloned partitions are mounted on $clone for inspection or customizing. 
+Cloned partitions are mounted on $clone for inspection or customizing.
 
 Hit Enter when ready to unmount the /dev/$dst_disk partitions ..."
 
@@ -1638,5 +1664,10 @@ fi
 
 unmount_list "$unmount_list"
 qprintf "===============================\n\n"
+
+if ((use_image))
+then
+    losetup -d "/dev/$dst_disk*"
+fi
 
 exit 0
