@@ -1667,7 +1667,7 @@ qprintf "===============================\n\n"
 
 if ((use_image))
 then
-    losetup -d "/dev/$dst_disk*"
+    losetup -d "/dev/$dst_disk"
 fi
 
 exit 0
