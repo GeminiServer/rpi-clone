@@ -73,7 +73,7 @@ usage: $PGM sdN {-v|--verbose} {-f|--force-initialize} {-f2}
          {-s|--setup host} {-e|--edit-fstab sdX } {-m|--mountdir dir }
          {-L|--label-partitions label} {-l|--leave-sd-usb-boot}
          {-a|--all-sync} {-F|--Force-sync} {-x} {-V|--version}
-         {-i|--image /path/to/image.img}
+         {-i|--image /path/to/image.img [-j xx]}
          {--convert-fstab-to-partuuid}
 
     -v	    - verbose rsync, list all files as they are copied.
@@ -111,6 +111,8 @@ usage: $PGM sdN {-v|--verbose} {-f|--force-initialize} {-f2}
                 If source used > destination space error, do the sync anyway.
 		If a source partition mount error, skip it and do other syncs.
     -i      - target is an image file, not a device.
+    -j xx   - if target is an image file, xx size of the image file in % of
+            original SD. Example: -j 50 equal 50% of original SD, (default 100)
     -x      - use set -x for very verbose bash shell script debugging
     -V      - print rpi-clone version.
 
@@ -122,6 +124,10 @@ usage: $PGM sdN {-v|--verbose} {-f|--force-initialize} {-f2}
   other systems.  For a destination disk that shows up as sda, run:
 
     $ sudo rpi-clone sda
+
+  The destination is an image, and the size of image is 50 % of original SD, run :
+
+    $ sudo rpi-clone -i /media/hdd/tmp/imageSD.img -j 50
 
   Clones can be from a booted SD card or USB disk.  For a description, example
   clone runs and example usage of above options, see the README.md at:
@@ -683,6 +689,7 @@ leave_sd_usb_boot=0
 convert_to_partuuid=0
 image=""
 use_image=0
+percentage=100
 
 while [ "$1" ]
 do
@@ -773,16 +780,20 @@ do
 		--convert-fstab-to-partuuid)
 			convert_to_partuuid=1
 			;;
-                -i|--image)
-                        shift
-                        image="$1"
-                        use_image=1
-                        if [ -e "$image" ]
-                        then
-                                echo "Image $image already exists; aborting"
-                                exit 1
-                        fi
-                        ;;
+        -i|--image)
+            shift
+            image="$1"
+            use_image=1
+            if [ -e "$image" ]
+            then
+                echo "Image $image already exists; aborting"
+                exit 1
+            fi
+            ;;
+        -j)
+			shift
+        	percentage=$1
+        	;;    
 		-V|--version)
 			echo $PGM Version: $version
 			exit 0
@@ -928,7 +939,7 @@ done
 #
 if ((use_image))
 then
-       truncate -s "$(($src_disk_size * 512 ))" "$image"
+       truncate -s "$(($src_disk_size * $percentage / 100 * 512 ))" "$image"
        dst_disk=$(losetup -f --show "$image")
        dst_disk=${dst_disk#/dev/}
 fi
