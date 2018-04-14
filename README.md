@@ -119,6 +119,7 @@ usage: sys-clone sdN {-v|--verbose} {-f|--force-initialize} {-f2}
          {-s|--setup host} {-e|--edit-fstab sdX } {-m|--mountdir dir }
          {-L|--label-partitions label} {-l|--leave-sd-usb-boot}
          {-a|--all-sync} {-F|--Force-sync} {-x} {-V|--version}
+         {-i|--image /path/to/image.img [-j xx]}
          {--convert-fstab-to-partuuid}
 
     -v	    - verbose rsync, list all files as they are copied.
@@ -154,6 +155,9 @@ usage: sys-clone sdN {-v|--verbose} {-f|--force-initialize} {-f2}
     -a      - Sync all partitions if types compatible, not just mounted ones.
     -F      - force file system sync even if errors.
                 If source used > destination space error, do the sync anyway.
+    -i      - target is an image file, not a device.
+    -j xx   - if target is an image file, xx size of the image file in % of
+            original SD. Example: -j 50 equal 50% of original SD, (default 100)
 		If a source partition mount error, skip it and do other syncs.
     -x      - use set -x for very verbose bash shell script debugging
     -V      - print rpi-clone version.
@@ -224,7 +228,16 @@ If it is not, then the clone will have to be to a two partition -f2
 clone or a clone to a manually partitioned destination.  So, for a
 multi partition disk, select partition number and sizes with a eye
 towards how you will be cloning back to smaller disks.
-11. Desktop demo
+
+11. Clones from my Debian desktop
+
+12. Clone to image file on a mounted partition. 
+```
+Destination is an image file on a mounted partition  
+  $ rpi-clone -i /media/freebox/tmp/image_sd.img
+Destination is 50% small than original SD
+  $ rpi-clone -i /media/freebox/tmp/image_sd.img -j 50
+```
 
 
 #### 1) First clone to a new SD card in USB card reader
@@ -702,6 +715,32 @@ Verbose mode           : no
 Ok to proceed with the clone?  (yes/no): 
 ```
 
+#### 12) Clone to image file on a mounted partition.
+
+here the destination is an image file "image_sd.img"
+and the size is 50 % of original SD.
+
+$ ./rpi-clone -i /media/freebox/tmp/image_sd.img -j 50
+Error: /dev/loop0: unrecognised disk label
+
+Booted disk: mmcblk0 7.9GB                 Destination disk: loop0 4.0GB
+---------------------------------------------------------------------------
+Part      Size    FS     Label           Part   Size  FS  Label
+1 /boot   43.5MB  fat32  --
+2 root     7.9GB  ext4   rootfs
+---------------------------------------------------------------------------
+== Initialize: IMAGE mmcblk0 partition table to loop0 - FS types mismatch ==
+1 /boot               (21.5MB used)  : IMAGE     to loop0p1  FSCK
+2 root                (2.2GB used)   : RESIZE(3.9GB) MKFS SYNC to loop0p2
+---------------------------------------------------------------------------
+Run setup script       : no
+Verbose mode           : no
+-----------------------:
+** WARNING **          : All destination disk loop0 data will be overwritten!
+                       :   The partition structure will be imaged from mmcblk0.
+-----------------------:
+
+Initialize and clone to the destination disk loop0?  (yes/no):
 
 ## Author
 Bill Wilson
