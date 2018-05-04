@@ -719,9 +719,8 @@ Ok to proceed with the clone?  (yes/no):
 
 here the destination is an image file "image_sd.img"
 and the size is 50 % of original SD.
-
-$ ./rpi-clone -i /media/freebox/tmp/image_sd.img -j 50
-Error: /dev/loop0: unrecognised disk label
+```
+~$ ./rpi-clone -i /media/freebox/tmp/image_sd.img -j 50
 
 Booted disk: mmcblk0 7.9GB                 Destination disk: loop0 4.0GB
 ---------------------------------------------------------------------------
@@ -741,7 +740,7 @@ Verbose mode           : no
 -----------------------:
 
 Initialize and clone to the destination disk loop0?  (yes/no):
-
+```
 ## Author
 Bill Wilson
 billw--at--gkrellm.net
